@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ប្រព័ន្ធគ្រប់គ្រងចំណតយានយន្ត</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Khmer&family=Moul&family=Siemreap&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Siemreap', sans-serif; }
+        .font-moul { font-family: 'Moul', cursive; }
+        @media print {
+            body * { visibility: hidden; }
+            #ticketPrintArea, #ticketPrintArea * { visibility: visible; }
+            #ticketPrintArea { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+    </style>
+    <script>
+        if (localStorage.getItem('admin_logged') !== 'true') {
+            window.location.href = 'login.html';
+        }
+    </script>
+</head>
+<body class="bg-slate-900 min-h-screen p-4 md:p-6 text-gray-800 antialiased">
+    <div class="max-w-7xl mx-auto space-y-6">
+
+        <!-- Header & Logout -->
+        <div class="flex flex-col sm:flex-row justify-between items-center py-4 px-6 bg-white rounded-2xl shadow-lg border border-slate-700/30 gap-4">
+            <div class="text-center sm:text-left">
+                <h1 class="text-xl md:text-2xl font-bold font-moul text-slate-800">ប្រព័ន្ធគ្រប់គ្រងចំណតយានយន្ត</h1>
+                <p class="text-xs text-slate-500 font-semibold uppercase mt-0.5">Parking Management System</p>
+            </div>
+            <div class="flex items-center space-x-3">
+                <span id="adminDisplayName" class="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-xl border">👤 Admin</span>
+                <span id="adminRoleBadge" class="text-xs font-bold bg-blue-100 text-blue-800 px-2.5 py-1.5 rounded-xl border border-blue-200">Role: ADMIN</span>
+                <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white text-xs font-semibold px-3 py-2 rounded-xl shadow transition">
+                    🚪 ចាកចេញ (Logout)
+                </button>
+            </div>
+        </div>
+
+        <!-- Dashboard Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Form កត់ត្រាចូល -->
+            <div class="lg:col-span-3 bg-white p-5 rounded-2xl shadow-xl border border-slate-200 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center space-x-2 border-b border-slate-100 pb-3 mb-4">
+                        <div class="w-3 h-6 bg-blue-600 rounded-full"></div>
+                        <h2 class="text-lg font-bold text-slate-700">កត់ត្រាយានយន្តចូល</h2>
+                    </div>
+                    <form id="checkinForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-600 mb-1">ស្លាកលេខ (Plate No.)</label>
+                            <input type="text" id="plateNo" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 uppercase font-semibold" placeholder="ភ្នំពេញ 1A-1111">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-600 mb-1">ប្រភេទ (Type)</label>
+                            <select id="vehicleType" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 font-semibold">
+                                <option value="Motor">Motor (ម៉ូតូ - 2,000៛/ថ្ងៃ)</option>
+                                <option value="Car">Car (ឡាន - 4,000៛/ម៉ោង)</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-xl transition shadow-md mt-2 flex items-center justify-center space-x-1">
+                            <span>+ បញ្ចូលចំណត & បោះពុម្ពសំបុត្រ</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- តារាងស្ថានភាពចំណត -->
+            <div class="lg:col-span-4 bg-white p-5 rounded-2xl shadow-xl border border-slate-200">
+                <div class="flex items-center space-x-2 border-b border-slate-100 pb-3 mb-4">
+                    <div class="w-3 h-6 bg-emerald-600 rounded-full"></div>
+                    <h2 class="text-lg font-bold text-slate-700">ស្ថានភាពចំណតបច្ចុប្បន្ន</h2>
+                </div>
+                <div class="overflow-x-auto border border-slate-100 rounded-xl">
+                    <table class="w-full text-sm text-center border-collapse">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
+                            <tr>
+                                <th class="px-3 py-2 border-r border-slate-200">Type</th>
+                                <th class="px-3 py-2 border-r border-slate-200">Total</th>
+                                <th class="px-3 py-2 border-r border-slate-200">Parked</th>
+                                <th class="px-3 py-2">Available</th>
+                            </tr>
+                        </thead>
+                        <tbody id="capacityTable" class="divide-y divide-slate-100 font-medium bg-white"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- តារាងចំណូលសរុបថ្ងៃនេះ -->
+            <div class="lg:col-span-5 bg-white p-5 rounded-2xl shadow-xl border border-slate-200">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-3 h-6 bg-purple-600 rounded-full"></div>
+                        <h2 class="text-lg font-bold text-slate-700">ចំណូលសរុបថ្ងៃនេះ</h2>
+                    </div>
+                    <a href="reports.html" id="btnReports" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-md transition">
+                        មើលរបាយការណ៍ទាំងអស់ 📊
+                    </a>
+                </div>
+                <div class="overflow-x-auto border border-slate-100 rounded-xl max-h-[195px] overflow-y-auto">
+                    <table class="w-full text-sm text-center border-collapse">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold sticky top-0 shadow-sm">
+                            <tr>
+                                <th class="px-3 py-2 border-r border-slate-200">Date</th>
+                                <th class="px-3 py-2 border-r border-slate-200">Item</th>
+                                <th class="px-3 py-2 border-r border-slate-200">Count</th>
+                                <th class="px-3 py-2">Income</th>
+                            </tr>
+                        </thead>
+                        <tbody id="summaryTable" class="divide-y divide-slate-100 font-medium bg-white"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Vehicle Logs Table Section -->
+        <div class="bg-white p-5 rounded-2xl shadow-xl border border-slate-200">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between border-b border-slate-100 pb-4 mb-4 gap-4">
+                <div class="flex items-center space-x-2">
+                    <div class="w-3 h-6 bg-slate-700 rounded-full"></div>
+                    <h2 class="text-lg font-bold text-slate-700">កំណត់ហេតុចូល-ចេញលម្អិត (Vehicle Logs)</h2>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3">
+                    <button id="btnFrequent" onclick="toggleFrequentFilter()" class="bg-purple-100 hover:bg-purple-200 text-purple-800 border border-purple-300 text-xs font-bold px-3 py-2 rounded-xl transition shadow-sm flex items-center space-x-1">
+                        <span>🔁 បង្ហាញចេញ-ចូលលើសពី ២ ដង</span>
+                    </button>
+
+                    <div class="relative w-full sm:w-64">
+                        <input type="text" id="searchPlateNo" onkeyup="searchByPlateNo()" placeholder="🔍 ស្វែងរកស្លាកលេខ..." class="w-full rounded-xl border border-slate-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 uppercase font-semibold" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-x-auto border border-slate-200 rounded-xl bg-white">
+                <table class="w-full text-sm text-left border-collapse">
+                    <thead class="bg-slate-800 text-white text-center font-semibold">
+                        <tr>
+                            <th class="px-3 py-3 border-r border-slate-700 w-12">No.</th>
+                            <th class="px-4 py-3 border-r border-slate-700">Plate No.</th>
+                            <th class="px-3 py-3 border-r border-slate-700 w-24">Type</th>
+                            <th class="px-4 py-3 border-r border-slate-700">Time In</th>
+                            <th class="px-4 py-3 border-r border-slate-700">Time Out</th>
+                            <th class="px-3 py-3 border-r border-slate-700 w-36">Duration</th>
+                            <th class="px-4 py-3 border-r border-slate-700 w-36">Total Fee</th>
+                            <th class="px-3 py-3 w-48">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTable" class="divide-y divide-slate-200"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Ticket Print Modal -->
+    <div id="ticketModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center border">
+            <div id="ticketPrintArea" class="bg-amber-50/50 p-4 rounded-xl border border-dashed border-amber-300">
+                <h3 class="text-xl font-bold font-moul text-slate-800">សំបុត្រចំណតយានយន្ត</h3>
+                <p class="text-xs text-slate-500 font-semibold mb-3">PARKING ENTRY TICKET</p>
+                <div class="border-t border-b border-dashed border-slate-300 py-3 my-2 text-left space-y-1.5 text-sm">
+                    <p><strong>ស្លាកលេខ:</strong> <span id="tPlateNo" class="text-base font-bold text-blue-700"></span></p>
+                    <p><strong>ប្រភេទ:</strong> <span id="tVehicleType" class="font-bold"></span></p>
+                    <p><strong>ម៉ោងចូល:</strong> <span id="tTimeIn" class="text-xs text-slate-700 font-medium"></span></p>
+                    <p><strong>អត្រាថ្លៃ:</strong> <span id="tRate" class="text-xs font-semibold text-emerald-700"></span></p>
+                </div>
+                <div class="my-3 flex flex-col items-center justify-center">
+                    <div class="bg-slate-900 text-white font-mono text-xs px-4 py-1.5 rounded tracking-widest" id="tBarcode">PARK-10023</div>
+                    <p class="text-[10px] text-slate-400 mt-1">សូមរក្សាសំបុត្រនេះសម្រាប់ទូទាត់ប្រាក់ពេលចេញ</p>
+                </div>
+            </div>
+            <div class="flex space-x-2 mt-4">
+                <button onclick="closeTicketModal()" class="w-1/2 bg-slate-200 text-slate-700 py-2 rounded-xl text-xs font-bold">បិទ</button>
+                <button onclick="window.print()" class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-xl text-xs font-bold shadow">🖨️ បោះពុម្ពសំបុត្រ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- KHQR Payment Modal -->
+    <div id="khqrModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center border">
+            <div class="bg-red-600 text-white py-2 px-3 rounded-xl font-bold text-sm mb-3 flex items-center justify-center space-x-2">
+                <span>🇰🇭 KHQR PAYMENT</span>
+            </div>
+            <p class="text-xs text-slate-500 font-semibold mb-1">ស្កេនទូទាត់ថ្លៃចំណតយានយន្ត</p>
+            <h4 id="khqrPlate" class="text-lg font-bold text-slate-800">1A-1111</h4>
+
+            <div class="my-3 bg-slate-50 p-3 rounded-xl border">
+                <p class="text-xs text-slate-500">ចំនួនប្រាក់ត្រូវទូទាត់</p>
+                <p id="khqrAmount" class="text-2xl font-bold text-emerald-600">4,000 ៛</p>
+            </div>
+
+            <div class="bg-slate-100 p-4 rounded-xl border flex flex-col items-center justify-center my-3 relative">
+                <div class="w-40 h-40 bg-white p-2 rounded-lg border shadow-inner flex flex-col items-center justify-center border-red-200">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=KHQR_PARKING_PAYMENT" alt="KHQR Code" class="w-36 h-36 object-contain">
+                </div>
+                <p class="text-[11px] text-slate-500 font-bold mt-2">ABA / ACLEDA / Canadia Bank</p>
+            </div>
+
+            <div class="flex space-x-2 mt-4">
+                <button onclick="closeKhqrModal()" class="w-1/2 bg-slate-200 text-slate-700 py-2.5 rounded-xl text-xs font-bold">បោះបង់</button>
+                <button onclick="confirmKhqrPayment()" class="w-1/2 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold shadow flex items-center justify-center space-x-1">
+                    <span>✓ ទទួលបានប្រាក់រួច</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 border-t-4 border-amber-500">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="text-lg font-bold text-slate-700 font-moul">✏️ កែប្រែទិន្នន័យ (Admin Only)</h3>
+                <button onclick="closeEditModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+            </div>
+            <form id="editForm" class="space-y-4">
+                <input type="hidden" id="editId">
+                <div>
+                    <label class="block text-sm font-semibold mb-1">ស្លាកលេខ</label>
+                    <input type="text" id="editPlateNo" required class="w-full rounded-xl border px-3 py-2 focus:ring-2 focus:ring-amber-500 uppercase font-semibold">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">ម៉ោងចូល</label>
+                    <input type="datetime-local" id="editTimeIn" required class="w-full rounded-xl border px-3 py-2 focus:ring-2 focus:ring-amber-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">ម៉ោងចេញ</label>
+                    <input type="datetime-local" id="editTimeOut" class="w-full rounded-xl border px-3 py-2 focus:ring-2 focus:ring-amber-500">
+                    <p class="text-xs text-red-500 mt-0.5">*ទុកទទេរបើចង់ឱ្យទៅជា «កំពុងចត»</p>
+                </div>
+                <div class="flex space-x-3 pt-2">
+                    <button type="button" onclick="closeEditModal()" class="w-1/2 bg-slate-200 text-slate-700 py-2 rounded-xl font-semibold">បោះបង់</button>
+                    <button type="submit" class="w-1/2 bg-amber-500 text-white py-2 rounded-xl shadow font-semibold">រក្សាទុក</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        const API_URL = '/api/parking';
+        let globalLogsData = [];
+        let isFrequentOnly = false;
+        let pendingCheckoutId = null;
+
+        // យក Role មកធ្វើជា lowercase ដើម្បីផ្ទៀងផ្ទាត់ឱ្យត្រឹមត្រូវ
+        let currentAdminRole = (localStorage.getItem('admin_role') || 'admin').toLowerCase();
+
+        if (localStorage.getItem('admin_name')) {
+            document.getElementById('adminDisplayName').innerText = '👤 ' + localStorage.getItem('admin_name');
+            document.getElementById('adminRoleBadge').innerText = 'Role: ' + currentAdminRole.toUpperCase();
+        }
+
+        // បើជា Security/Cashier ត្រូវបិទប៊ូតុង "មើលរបាយការណ៍ទាំងអស់"
+        if (currentAdminRole === 'security' || currentAdminRole === 'cashier') {
+            const btnRep = document.getElementById('btnReports');
+            if (btnRep) btnRep.style.display = 'none';
+        }
+
+        async function fetchData() {
+            try {
+                const [resCap, resSum, resLogs] = await Promise.all([
+                    fetch(`${API_URL}/capacity`),
+                    fetch(`${API_URL}/summary/daily`),
+                    fetch(`${API_URL}/logs`)
+                ]);
+
+                const capacities = await resCap.json();
+                const summaries = await resSum.json();
+                globalLogsData = await resLogs.json();
+
+                document.getElementById('capacityTable').innerHTML = capacities.map(c => `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="px-3 py-2.5 font-bold border-r border-slate-200 text-slate-700">${c.vehicle_type}</td>
+                        <td class="px-3 py-2.5 border-r border-slate-200 text-slate-600">${c.total_capacity}</td>
+                        <td class="px-3 py-2.5 border-r border-slate-200 text-orange-600 font-bold">${c.currently_parked}</td>
+                        <td class="px-3 py-2.5 text-emerald-600 font-bold">${c.available_space}</td>
+                    </tr>
+                `).join('');
+
+                document.getElementById('summaryTable').innerHTML = summaries.length ? summaries.map(s => `
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-3 py-2 text-xs border-r border-slate-200 text-slate-600">${s.summary_date}</td>
+                        <td class="px-3 py-2 border-r border-slate-200 font-semibold">${s.vehicle_type}</td>
+                        <td class="px-3 py-2 border-r border-slate-200 text-slate-600">${s.total_vehicles_count} គ្រឿង</td>
+                        <td class="px-3 py-2 font-bold text-blue-600">${Number(s.total_income).toLocaleString()} ៛</td>
+                    </tr>
+                `).join('') : `<tr><td colspan="4" class="px-3 py-4 text-slate-400 italic bg-white">មិនទាន់មានទិន្នន័យថ្ងៃនេះទេ</td></tr>`;
+
+                renderLogsTable();
+
+            } catch (err) {
+                console.error("Error fetching data:", err);
+            }
+        }
+
+        function renderLogsTable() {
+            let logsToDisplay = globalLogsData;
+
+            if (isFrequentOnly) {
+                const counts = {};
+                globalLogsData.forEach(l => {
+                    counts[l.plate_no] = (counts[l.plate_no] || 0) + 1;
+                });
+                logsToDisplay = globalLogsData.filter(l => counts[l.plate_no] > 2);
+            }
+
+            document.getElementById('logsTable').innerHTML = logsToDisplay.length ? logsToDisplay.map((l, index) => {
+                const isParked = l.time_out === null;
+                let rowColor = isParked ? 'bg-amber-100 hover:bg-amber-200/80' : l.vehicle_type === 'Car' ? 'bg-blue-100 hover:bg-blue-200/80' : 'bg-purple-100 hover:bg-purple-200/80';
+
+                // មានតែ Admin ពិតប្រាកដទើបបង្ហាញប៊ូតុងកែប្រែ
+                const showEditBtn = (currentAdminRole === 'admin');
+
+                const formattedDuration = (() => {
+                    if (isParked) return '-';
+                    const totalMinutes = Math.round(parseFloat(l.duration_hours || 0) * 60);
+                    const hrs = Math.floor(totalMinutes / 60);
+                    const mins = totalMinutes % 60;
+                    if (hrs > 0 && mins > 0) return `${hrs} ម៉ោង ${mins} នាទី`;
+                    if (hrs > 0) return `${hrs} ម៉ោង`;
+                    return `${mins} នាទី`;
+                })();
+
+                return `
+                    <tr class="${rowColor} text-center transition border-b border-slate-200">
+                        <td class="px-3 py-3 border-r border-slate-200 font-semibold text-xs text-slate-600">${index + 1}</td>
+                        <td class="px-4 py-3 border-r border-slate-200 font-bold text-left text-slate-800">${l.plate_no}</td>
+                        <td class="px-3 py-3 border-r border-slate-200">
+                            <span class="px-2 py-0.5 rounded-lg text-xs font-bold ${l.vehicle_type === 'Car' ? 'bg-blue-300 text-blue-900' : 'bg-purple-300 text-purple-900'}">${l.vehicle_type}</span>
+                        </td>
+                        <td class="px-4 py-3 border-r border-slate-200 text-xs text-left text-slate-700">${l.time_in}</td>
+                        <td class="px-4 py-3 border-r border-slate-200 text-xs text-left text-slate-700">${isParked ? '<span class="text-amber-800 font-bold italic bg-amber-200/80 px-2 py-0.5 rounded border border-amber-300 shadow-sm">កំពុងចត</span>' : l.time_out}</td>
+                        <td class="px-3 py-3 border-r border-slate-200 font-bold text-slate-800">${formattedDuration}</td>
+                        <td class="px-4 py-3 border-r border-slate-200 font-bold text-emerald-700 text-right text-base">${Number(l.total_fee || 0).toLocaleString()} ៛</td>
+                        <td class="px-3 py-3">
+                            ${isParked ? `
+                                <div class="flex flex-col space-y-1">
+                                    <input type="datetime-local" id="timeout_val_${l.id}" class="text-xs border rounded-lg p-0.5">
+                                    <button onclick="openKhqrModal(${l.id}, '${l.plate_no}', '${l.vehicle_type}', '${l.time_in}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-1 rounded-lg text-xs font-bold shadow-sm">💳 គិតលុយ & ចេញ</button>
+                                </div>
+                            ` : `
+                                <div class="flex space-x-2 justify-center items-center">
+                                    <span class="text-emerald-700 font-bold text-xs">✓ រួចរាល់</span>
+                                    ${showEditBtn ? `<button onclick="openEditModal(${l.id}, '${l.plate_no}', '${l.time_in}', '${l.time_out || ''}')" class="bg-amber-500 hover:bg-amber-600 text-white px-2 py-0.5 rounded-lg text-[11px] font-bold shadow-sm">✏️ កែប្រែ</button>` : ''}
+                                </div>
+                            `}
+                        </td>
+                    </tr>
+                `;
+            }).join('') : `<tr><td colspan="8" class="px-4 py-8 text-center text-slate-400 italic bg-white">រកមិនឃើញទិន្នន័យស្របតាមលក្ខខណ្ឌឡើយ!</td></tr>`;
+        }
+
+        function toggleFrequentFilter() {
+            isFrequentOnly = !isFrequentOnly;
+            const btn = document.getElementById('btnFrequent');
+            if (isFrequentOnly) {
+                btn.className = "bg-purple-600 text-white border border-purple-700 text-xs font-bold px-3 py-2 rounded-xl transition shadow-md flex items-center space-x-1";
+                btn.innerHTML = "<span>✓ កំពុងបង្ហាញចេញ-ចូល > ២ ដង (ចុចដើម្បីបិទ)</span>";
+            } else {
+                btn.className = "bg-purple-100 hover:bg-purple-200 text-purple-800 border border-purple-300 text-xs font-bold px-3 py-2 rounded-xl transition shadow-sm flex items-center space-x-1";
+                btn.innerHTML = "<span>🔁 បង្ហាញចេញ-ចូលលើសពី ២ ដង</span>";
+            }
+            renderLogsTable();
+        }
+
+        document.getElementById('checkinForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const plate_no = document.getElementById('plateNo').value.trim();
+            const vehicle_type = document.getElementById('vehicleType').value;
+
+            if (!plate_no) return;
+
+            try {
+                const res = await fetch(`${API_URL}/checkin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ plate_no, vehicle_type })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    document.getElementById('plateNo').value = '';
+                    fetchData();
+                    showTicketModal(plate_no, vehicle_type);
+                } else {
+                    alert(data.message || 'មិនអាចបញ្ចូលបានទេ!');
+                }
+            } catch (err) {
+                alert('មានបញ្ហាក្នុងការតភ្ជាប់ទៅកាន់ Backend Server!');
+            }
+        });
+
+        function showTicketModal(plateNo, vehicleType) {
+            const nowStr = new Date().toLocaleString("sv-SE", { timeZone: "Asia/Phnom_Penh" });
+            document.getElementById('tPlateNo').innerText = plateNo;
+            document.getElementById('tVehicleType').innerText = vehicleType;
+            document.getElementById('tTimeIn').innerText = nowStr;
+            document.getElementById('tRate').innerText = vehicleType === 'Motor' ? '2,000 ៛ / ថ្ងៃ' : '4,000 ៛ / ម៉ោង';
+            document.getElementById('tBarcode').innerText = 'PARK-' + Math.floor(100000 + Math.random() * 900000);
+            document.getElementById('ticketModal').classList.remove('hidden');
+        }
+
+        function closeTicketModal() {
+            document.getElementById('ticketModal').classList.add('hidden');
+        }
+
+        function openKhqrModal(id, plateNo, vehicleType, timeIn) {
+            pendingCheckoutId = id;
+            document.getElementById('khqrPlate').innerText = plateNo + ' (' + vehicleType + ')';
+
+            const timeInDate = new Date(timeIn);
+            const now = new Date();
+            const diffMinutes = Math.max(1, Math.ceil((now - timeInDate) / (1000 * 60)));
+            let estFee = 0;
+            if (vehicleType === 'Motor') {
+                estFee = Math.ceil(diffMinutes / 1440.0) * 2000;
+            } else {
+                estFee = Math.ceil(diffMinutes / 60.0) * 4000;
+            }
+
+            document.getElementById('khqrAmount').innerText = Number(estFee).toLocaleString() + ' ៛';
+            document.getElementById('khqrModal').classList.remove('hidden');
+        }
+
+        function closeKhqrModal() {
+            document.getElementById('khqrModal').classList.add('hidden');
+            pendingCheckoutId = null;
+        }
+
+        async function confirmKhqrPayment() {
+            if (!pendingCheckoutId) return;
+            const customTime = document.getElementById(`timeout_val_${pendingCheckoutId}`) ? document.getElementById(`timeout_val_${pendingCheckoutId}`).value : null;
+
+            try {
+                const res = await fetch(`${API_URL}/checkout/${pendingCheckoutId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(customTime ? { custom_time_out: customTime.replace("T", " ") + ":00" } : {})
+                });
+                if (res.ok) {
+                    closeKhqrModal();
+                    fetchData();
+                }
+            } catch (err) {
+                alert('មានបញ្ហាក្នុងការចេញចំណត!');
+            }
+        }
+
+        function openEditModal(id, plateNo, timeIn, timeOut) {
+            document.getElementById('editId').value = id;
+            document.getElementById('editPlateNo').value = plateNo;
+            document.getElementById('editTimeIn').value = timeIn.replace(" ", "T").substring(0, 16);
+            document.getElementById('editTimeOut').value = timeOut ? timeOut.replace(" ", "T").substring(0, 16) : "";
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+
+        document.getElementById('editForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const res = await fetch(`${API_URL}/update-log/${document.getElementById('editId').value}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        plate_no: document.getElementById('editPlateNo').value.trim(),
+                        time_in: document.getElementById('editTimeIn').value.replace("T", " "),
+                        time_out: document.getElementById('editTimeOut').value ? document.getElementById('editTimeOut').value.replace("T", " ") : ""
+                    })
+                });
+                if (res.ok) {
+                    closeEditModal();
+                    fetchData();
+                }
+            } catch (err) {
+                alert('មានបញ្ហាក្នុងការកែប្រែ!');
+            }
+        });
+
+        function searchByPlateNo() {
+            const input = document.getElementById("searchPlateNo").value.toUpperCase();
+            const rows = document.getElementById("logsTable").getElementsByTagName("tr");
+            for (let i = 0; i < rows.length; i++) {
+                const plateCell = rows[i].getElementsByTagName("td")[1];
+                if (plateCell) {
+                    rows[i].style.display = (plateCell.textContent || plateCell.innerText).toUpperCase().indexOf(input) > -1 ? "" : "none";
+                }
+            }
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        }
+
+        fetchData();
+    </script>
+</body>
+</html>
